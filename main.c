@@ -4,18 +4,26 @@
 #include <time.h>
 #include <stdbool.h>
 
-#define MAX_WORD_LENGTH 100
-#define N_MAX 100
+#define MAX_WORD_LENGTH 500
+#define N_MAX 10000
+#define KEEP_BEST 0
 
-char alfabeto[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789 ";
+const char alfabeto[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789 ,.!?():;<>[]{}-+*/%&|^~$#@";
 
-//100 caracteres
-// 12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901
+// Devuelve caracter aleatorio del alfabeto
+char getRandomChar();
 
-char getRandomChar() {
-    int index = rand() % strlen(alfabeto);
-    return alfabeto[index];
-}
+// Devuelve una palabra con una mutacion aleatoria
+char* mutate(char* word);
+
+// Muestra la lista de palabras
+void showWords(char** words, int n);
+
+// Devuelve el puntaje de una palabra (0 es mejor)
+int puntaje(char* word, char* target);
+
+// Devuelve la palabra con mejor puntaje
+char* bestWord(char** words, int n, char* target, int* bestScore);
 
 int main() {
     srand(time(NULL));
@@ -32,7 +40,7 @@ int main() {
 
     // Palabra de meta.
     bool palabra_valida = false;
-    char* palabra = (char*)malloc(MAX_WORD_LENGTH * sizeof(char));
+    char palabra[MAX_WORD_LENGTH];
     do {
         printf("Alfabeto valido: %s\n", alfabeto);
         printf("Longitud maxima: %d\n", MAX_WORD_LENGTH);
@@ -49,14 +57,168 @@ int main() {
         }
     } while(!palabra_valida);
 
-    // Chequeo
-    printf("Numero de strings por generacion: %d\n", N);
-    printf("Palabra: %s\n", palabra);
-
 
     // Genera array de punteros a los strings.
-    char** strings = (char**)malloc(N * sizeof(char*));
+    char* strings[N];
+    for(int i = 0; i < N; i++) {
+        strings[i] = (char*)malloc(2 * sizeof(char));
+        strings[i][0] = getRandomChar();
+        strings[i][1] = '\0';
+    }
 
+    // // Muestra strings generados
+    // printf("Strings generados:\n");
+    // showWords(strings, N);
+
+    // Mientras no se encuentre la palabra
+    for(int i = 0; true; i++) {
+        // printf("\n");
+        int puntaje_palabra;
+        char* mejorT = bestWord(strings, N, palabra, &puntaje_palabra);
+        char* mejor = (char*)malloc((strlen(mejorT)+1) * sizeof(char));
+        strcpy(mejor, mejorT);
+
+        // Muestra la mejor palabra
+        printf("%d, puntaje: %d. %s\n", i, puntaje_palabra, mejor);
+
+
+        if(strcmp(mejor, palabra) == 0) {
+            printf("Palabra \"%s\" encontrada en %d iteraciones\n", mejor, i);
+            free(mejor);
+            break;
+        }
+
+        // Genera nuevas palabras
+        int inicio = 0;
+        if (KEEP_BEST) {
+            free(strings[0]);
+            strings[0] = mejor;
+            inicio = 1;
+        }
+        for(int i = inicio; i < N; i++) {
+            free(strings[i]);
+            strings[i] = mutate(mejor);
+        }
+        if(!KEEP_BEST) {
+            free(mejor);
+        }
+
+        // // Muestra strings generados
+        // printf("Strings generados:\n");
+        // showWords(strings, N);
+    }
+
+    for (int i = 0; i < N; i++) {
+        free(strings[i]);
+    }
 
     return 0;
+}
+
+char getRandomChar() {
+    int index = rand() % strlen(alfabeto);
+    return alfabeto[index];
+}
+
+char* mutate(char* word) {
+    // si choice == 0, se agrega un caracter
+    // si choice == 1, se elimina un caracter
+
+    int choice = rand() % 2;
+    if (strlen(word) <= 1) {
+        choice = 0;
+    }
+
+    if (choice == 0) {
+        char* newWord = (char*)malloc((strlen(word)+1 +1) * sizeof(char));
+        int index = rand() % (strlen(word)+1);
+
+        for(int i = 0; i < strlen(word); i++) {
+            if (i < index) {
+                newWord[i] = word[i];
+            } else {
+                newWord[i+1] = word[i];
+            }
+        }
+        newWord[index] = getRandomChar();
+        newWord[strlen(word)+1] = '\0';
+        return newWord;
+    }
+
+    else {
+        char* newWord = (char*)malloc((strlen(word)-1 +1) * sizeof(char));
+        int index = rand() % strlen(word);
+
+        for(int i = 0; i < strlen(word); i++) {
+            if (i < index) {
+                newWord[i] = word[i];
+            } else if (i > index) {
+                newWord[i-1] = word[i];
+            }
+        }
+        newWord[strlen(word)-1] = '\0';
+        return newWord;
+    }
+}
+
+void showWords(char** words, int n) {
+    for(int i = 0; i < n; i++) {
+        printf("%s\n", words[i]);
+    }
+}
+
+int min(int a, int b) {
+    if (a < b) {
+        return a;
+    }
+    return b;
+}
+
+int puntaje(char* word, char* target) {
+    int scoreTable[strlen(word)+1][strlen(target)+1];
+
+    for(int i = 0; i <= strlen(word); i++) {
+        scoreTable[i][0] = i;
+    }
+    for(int i = 0; i <= strlen(target); i++) {
+        scoreTable[0][i] = i;
+    }
+
+    for(int i = 1; i <= strlen(word); i++) {
+        for(int j = 1; j <= strlen(target); j++) {
+            int scoreL, scoreU, scoreD, scoreF;
+            scoreL = scoreTable[i-1][j] + 1;
+            scoreU = scoreTable[i][j-1] + 1;
+            scoreD = scoreTable[i-1][j-1];
+            if (word[i-1] == target[j-1]) {
+                scoreF = min(min(scoreL, scoreU), scoreD);
+            } else {
+                scoreF = min(scoreL, scoreU);
+            }
+            scoreTable[i][j] = scoreF;
+        }
+    }
+
+    // // Muestra tabla de puntajes
+    // printf("Tabla de puntajes para palabra %s y %s:\n", word, target);
+    // for(int j = 0; j <= strlen(target); j++) {
+    //     for(int i = 0; i <= strlen(word); i++) {
+    //         printf("%d ", scoreTable[i][j]);
+    //     }
+    //     printf("\n");
+    // }
+    return scoreTable[strlen(word)][strlen(target)];
+}
+
+char* bestWord(char** words, int n, char* target, int* bestScore) {
+    *bestScore = puntaje(words[0], target);
+    int bestIndex = 0;
+    for(int i = 1; i < n; i++) {
+        int score = puntaje(words[i], target);
+        if (score < *bestScore) {
+            *bestScore = score;
+            bestIndex = i;
+        }
+    }
+    return words[bestIndex];
 }
