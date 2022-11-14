@@ -54,7 +54,7 @@ int main() {
         printf("Numero de Strings por generacion: ");
         scanf("%d", &N);
         if (N < 2 || N > N_MAX) {
-            printf("El numero debe ser mayor o igual a 2 y menor o igual que %d.\n", N_MAX);
+            printf(ROJO_T "El numero debe ser mayor o igual a 2 y menor o igual que %d.\n" RESET_COLOR, N_MAX);
         }
     } while ( N < 2 || N > N_MAX);
 
@@ -62,15 +62,15 @@ int main() {
     bool palabra_valida = false;
     char palabra[MAX_WORD_LENGTH];
     do {
-        printf("Alfabeto valido: %s\n", alfabeto);
-        printf("Longitud maxima: %d\n", MAX_WORD_LENGTH);
+        printf("Alfabeto valido: "VERDE_T"%s\n"RESET_COLOR , alfabeto);
+        printf("Longitud maxima: "MAGENTA_T"%d\n"RESET_COLOR, MAX_WORD_LENGTH);
         printf("Palabra: ");
         scanf("\n%[^\n]", palabra);
 
         palabra_valida = true;
         for(int i = 0; i < strlen(palabra); i++) {
             if(strchr(alfabeto, palabra[i]) == NULL) {
-                printf("La palabra contiene caracteres no permitidos.\n\n");
+                printf(ROJO_T "La palabra contiene caracteres no permitidos.\n\n" RESET_COLOR);
                 palabra_valida = false;
                 break;
             }
@@ -107,7 +107,10 @@ int main() {
 
 
         if(strcmp(mejor, palabra) == 0) {
-            printf("Palabra \"%s\" encontrada en %d iteraciones\n", mejor, i);
+            printf(
+                "Palabra " VERDE_T "\"%s\"" RESET_COLOR " encontrada en " AMARILLO_T "%d" RESET_COLOR " iteraciones\n", 
+                mejor, 
+                i);
             free(mejor);
             break;
         }
